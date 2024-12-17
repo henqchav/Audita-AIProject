@@ -1,0 +1,43 @@
+---
+import { isAuthenticated } from '../utils/auth';
+
+// Eliminamos la redirección del servidor
+---
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>App - Audita</title>
+    </head>
+    <body class="bg-dark-bg text-text-primary">
+        <div id="app-content" class="hidden">
+            <div class="p-8">
+                <h1 class="text-2xl">Protected App Page</h1>
+                <button
+                    id="logout"
+                    class="mt-4 px-4 py-2 bg-accent-error rounded"
+                >
+                    Logout
+                </button>
+            </div>
+        </div>
+    </body>
+</html>
+
+<script>
+    // Verificar autenticación del lado del cliente
+    const isAuth = localStorage.getItem('auth') === 'true';
+    
+    if (!isAuth) {
+        window.location.href = '/';
+    } else {
+        document.getElementById('app-content')?.classList.remove('hidden');
+    }
+
+    document.getElementById('logout')?.addEventListener('click', () => {
+        localStorage.removeItem('auth');
+        window.location.href = '/';
+    });
+</script>
