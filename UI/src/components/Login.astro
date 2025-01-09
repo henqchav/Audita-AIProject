@@ -1,0 +1,167 @@
+<div class="min-h-screen bg-dark-bg flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-dark-surface p-8 rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-text-primary text-center mb-2">
+      Bienvenido a Audita
+    </h1>
+
+    <p class="text-text-secondary mb-8 text-center">
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua.
+    </p>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          placeholder="Usuario"
+          class="w-full p-3 rounded bg-dark-bg border border-dark-divider text-text-primary focus:border-accent-primary focus:outline-none"
+          required
+        />
+      </div>
+
+      <div>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          placeholder="Contraseña"
+          class="w-full p-3 rounded bg-dark-bg border border-dark-divider text-text-primary focus:border-accent-primary focus:outline-none"
+          required
+        />
+      </div>
+
+      <p id="errorMessage" class="text-accent-error text-sm text-center hidden">
+        Credenciales inválidas
+      </p>
+
+      <button
+        type="submit"
+        class="w-full bg-accent-primary text-text-primary py-3 rounded font-medium hover:bg-opacity-90 transition-colors"
+      >
+        Iniciar sesión
+      </button>
+
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-dark-divider"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-2 bg-dark-surface text-text-secondary"
+            >o continúa con</span
+          >
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="w-full bg-accent-secondary text-dark-bg py-3 rounded font-medium hover:bg-opacity-90 transition-colors"
+        id="espolLoginButton"
+      >
+        Ingresa con tu cuenta ESPOL
+      </button>
+
+      <p class="text-text-secondary text-sm text-center mt-6"></p>
+      Al continuar aceptas nuestros <a
+        href="#"
+        class="text-accent-primary hover:underline">términos de servicios</a
+      > y
+      <a href="#" class="text-accent-primary hover:underline"
+        >políticas de privacidad</a
+      >
+    </form>
+  </div>
+</div>
+
+<div
+  id="espolModal"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden"
+>
+  <div class="w-full max-w-md bg-dark-surface p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-text-primary text-center mb-4">
+      Ingresa tu correo
+    </h2>
+    <input
+      id="espolEmail"
+      type="email"
+      placeholder="correo@dominio"
+      class="w-full p-3 rounded bg-dark-bg border border-dark-divider text-text-primary focus:border-accent-primary focus:outline-none mb-4"
+    />
+    <div class="flex justify-between">
+      <button
+        id="cancelButton"
+        class="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+      >
+        Cancelar
+      </button>
+      <button
+        id="submitButton"
+        class="bg-accent-primary text-text-primary py-2 px-4 rounded hover:bg-opacity-90 transition-colors"
+      >
+        Entrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { validateCredentials, setAuthToken } from "../utils/auth";
+
+  const form = document.getElementById("loginForm");
+  const errorMessage = document.getElementById("errorMessage");
+  const espolLoginButton = document.getElementById("espolLoginButton");
+  const espolModal = document.getElementById("espolModal");
+  const cancelButton = document.getElementById("cancelButton");
+  const submitButton = document.getElementById("submitButton");
+  const espolEmail = document.getElementById("espolEmail");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorMessage?.classList.add("hidden");
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const username = formData.get("username") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      const isValid = await validateCredentials(username, password);
+      if (isValid) {
+        setAuthToken(true);
+        window.location.href = "/app";
+      } else {
+        errorMessage?.classList.remove("hidden");
+      }
+    } catch (error) {
+      errorMessage?.classList.remove("hidden");
+    }
+  });
+
+  espolLoginButton?.addEventListener("click", () => {
+    espolModal?.classList.remove("hidden");
+  });
+
+  cancelButton?.addEventListener("click", () => {
+    espolModal?.classList.add("hidden");
+  });
+
+  submitButton?.addEventListener("click", () => {
+    handleEspolLogin();
+  });
+
+  espolEmail?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      handleEspolLogin();
+    }
+  });
+
+  function handleEspolLogin() {
+    const email = (espolEmail as HTMLInputElement)?.value;
+    if (email && email.endsWith("@espol.edu.ec")) {
+      setAuthToken(true);
+      window.location.href = "/app";
+    } else {
+      alert("Correo no válido. Debe ser un correo de ESPOL.");
+    }
+  }
+</script>
