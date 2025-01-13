@@ -1,6 +1,5 @@
 ---
 import { isAuthenticated } from '../utils/auth';
-
 ---
 
 <html lang="en">
@@ -10,39 +9,59 @@ import { isAuthenticated } from '../utils/auth';
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <title>App - Audita</title>
     </head>
-    <body class="bg-dark-bg text-text-primary">
-        <header class="flex justify-between items-center p-4 bg-dark-surface text-text-primary">
-            <div></div>
-            <h1 class="text-center text-2xl">AUDITA</h1>
-            <button
-                id="logout"
-                class="px-4 py-2 bg-accent-error rounded"
-            >
-                Log Out
-            </button>
-        </header>
-        <main class="flex justify-center items-center h-screen">
-            <button id="auditButton" class="px-8 py-4 bg-accent-primary text-text-primary rounded transition-transform transform hover:scale-105">
-                Auditar audio
-            </button>
-        </main>
-        <footer class="text-center p-4 bg-dark-surface text-text-secondary">
-            created by henqchav
-        </footer>
-
-        <!-- Modal -->
-        <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
-            <div class="bg-dark-surface p-6 rounded-md w-1/3 relative">
-                <button id="closeModal" class="absolute top-2 right-2 text-text-primary">X</button>
-                <h2 class="text-center text-text-primary mb-4">Sube tu archivo</h2>
-                <div id="dropZone" class="border-2 border-dashed border-text-secondary p-4 text-center">
-                    <p class="text-text-secondary">Arrastra tu archivo aquí</p>
-                    <p class="text-text-secondary">o</p>
-                    <button id="fileSelectButton" class="text-accent-primary underline">Selecciona tu archivo</button>
-                    <input type="file" id="fileInput" class="hidden" accept=".mp3, .wav" />
-                </div>
-                <button id="validateButton" class="mt-4 px-4 py-2 bg-accent-primary text-text-primary rounded hidden">Validar</button>
+    <body class="bg-dark-bg text-text-primary flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-dark-surface p-4 hidden md:block">
+            <h2 class="text-xl font-bold mb-4">Historial</h2>
+            <div id="historyContainer" class="text-text-secondary">
+                <p id="noHistoryMessage">Bienvenido a Audita, para empezar a validar audios por favor dale clic al botón "Auditar"</p>
             </div>
+        </aside>
+
+        <div class="flex-1">
+            <header class="flex justify-between items-center p-4 bg-dark-surface text-text-primary">
+                <h1 class="text-2xl font-bold">Audita</h1>
+                <div class="flex gap-4">
+                    <button id="logout" class="px-4 py-2 border border-text-primary rounded">Cerrar sesión</button>
+                </div>
+            </header>
+
+            <main class="flex flex-col justify-center items-center h-screen">
+                <button id="auditButton" class="px-4 py-2 bg-accent-primary rounded mb-4">Auditar</button>
+                <!-- Modal -->
+                <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
+                    <div class="bg-dark-surface p-6 rounded-md w-2/3 md:w-1/2 lg:w-1/3 relative">
+                        <button id="closeModal" class="absolute top-2 right-2 text-text-primary">X</button>
+                        <h2 id="modalTitle" class="text-center text-text-primary mb-4">Sube tu archivo</h2>
+                        
+                        <!-- Drop Zone -->
+                        <div id="dropZone" class="border-2 border-dashed border-text-secondary p-4 text-center">
+                            <p class="text-text-secondary">Arrastra tu archivo aquí</p>
+                            <p class="text-text-secondary">o</p>
+                            <button id="fileSelectButton" class="text-accent-primary underline">
+                                Selecciona tu archivo
+                            </button>
+                            <input type="file" id="fileInput" class="hidden" accept=".mp3, .wav" />
+                        </div>
+
+                        <!-- Audio Player -->
+                        <div id="audioPlayerContainer" class="mt-4 hidden">
+                            <audio id="audioPlayer" class="w-full mb-2" controls>
+                                Tu navegador no soporta el elemento audio.
+                            </audio>
+                        </div>
+
+                        <button id="validateButton" class="mt-4 px-4 py-2 bg-accent-primary text-text-primary rounded hidden w-full">
+                            Validar
+                        </button>
+                        <p id="loader" class="mt-4 text-text-primary hidden">Cargando, por favor espere...</p>
+                        <div id="resultContainer" class="mt-4 hidden text-center">
+                            <p id="result" class="text-text-primary"></p>
+                        </div>
+                        <p id="validateAnother" class="mt-4 text-accent-primary underline cursor-pointer hidden text-center">Validar otro audio</p>
+                    </div>
+                </div>
+            </main>
         </div>
     </body>
 </html>
@@ -52,15 +71,9 @@ import { isAuthenticated } from '../utils/auth';
     
     if (!isAuth) {
         window.location.href = '/';
-    } else {
-        document.getElementById('app-content')?.classList.remove('hidden');
     }
 
-    document.getElementById('logout')?.addEventListener('click', () => {
-        localStorage.removeItem('auth');
-        window.location.href = '/';
-    });
-
+    // DOM Elements
     const auditButton = document.getElementById('auditButton');
     const modal = document.getElementById('modal');
     const closeModal = document.getElementById('closeModal');
@@ -68,23 +81,65 @@ import { isAuthenticated } from '../utils/auth';
     const fileSelectButton = document.getElementById('fileSelectButton');
     const dropZone = document.getElementById('dropZone');
     const validateButton = document.getElementById('validateButton');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const audioPlayerContainer = document.getElementById('audioPlayerContainer');
+    const loader = document.getElementById('loader');
+    const result = document.getElementById('result');
+    const resultContainer = document.getElementById('resultContainer');
+    const validateAnother = document.getElementById('validateAnother');
+    const historyContainer = document.getElementById('historyContainer');
+    const noHistoryMessage = document.getElementById('noHistoryMessage');
+    const modalTitle = document.getElementById('modalTitle');
+    let audioUrl = null;
+    let selectedFile = null;
 
+    // Load history from localStorage
+    const history = JSON.parse(localStorage.getItem('history')) || [];
+    if (history.length > 0) {
+        noHistoryMessage.classList.add('hidden');
+        history.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.classList.add('p-2', 'mb-2', 'cursor-pointer', 'hover:border', 'hover:rounded');
+            div.textContent = `Audio ${index + 1}: ${item.result}`;
+            div.addEventListener('click', () => {
+                const audioBlob = new Blob([item.audioBlob], { type: 'audio/mp3' });
+                selectedFile = new File([audioBlob], `audio${index + 1}.mp3`, { type: 'audio/mp3' });
+                audioPlayer.src = URL.createObjectURL(selectedFile);
+                audioPlayerContainer.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+                result.textContent = item.result;
+                resultContainer.classList.remove('hidden');
+                validateAnother.classList.remove('hidden');
+                modalTitle.textContent = `Audio ${index + 1}`;
+                resultContainer.classList.toggle('bg-green-500', item.result === 'AUDIO AUTENTICO');
+                resultContainer.classList.toggle('bg-red-500', item.result === 'AUDIO FALSIFICADO');
+                modal.classList.remove('hidden');
+            });
+            historyContainer.appendChild(div);
+        });
+    }
+
+    // Logout handler
+    document.getElementById('logout')?.addEventListener('click', () => {
+        localStorage.removeItem('auth');
+        window.location.href = '/';
+    });
+
+    // Modal handlers
     auditButton.addEventListener('click', () => {
+        modalTitle.textContent = 'Sube tu archivo';
         modal.classList.remove('hidden');
     });
-
     closeModal.addEventListener('click', () => {
         modal.classList.add('hidden');
+        cleanupAudio();
     });
 
-    fileSelectButton.addEventListener('click', () => {
-        fileInput.click();
-    });
+    // File input handlers
+    fileSelectButton.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (event) => handleFile(event.target.files[0]));
 
-    fileInput.addEventListener('change', (event) => {
-        handleFile(event.target.files[0]);
-    });
-
+    // Drag and drop handlers
     dropZone.addEventListener('dragover', (event) => {
         event.preventDefault();
         dropZone.classList.add('bg-gray-700');
@@ -100,20 +155,105 @@ import { isAuthenticated } from '../utils/auth';
         handleFile(event.dataTransfer.files[0]);
     });
 
+    // File handling
     function handleFile(file) {
-        if (file && (file.type === 'audio/mp3' || file.type === 'audio/wav')) {
+        const validTypes = ['audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mpeg'];
+        if (file && validTypes.includes(file.type)) {
+            console.log(file);
+            console.log(file.type);
+            selectedFile = file;
+            audioPlayer.src = URL.createObjectURL(file);
+            audioPlayerContainer.classList.remove('hidden');
+            dropZone.classList.add('hidden');
             validateButton.classList.remove('hidden');
         } else {
             alert('Por favor, sube un archivo de audio válido (.mp3 o .wav)');
         }
     }
 
-    validateButton.addEventListener('click', () => {
-        const file = fileInput.files[0];
-        if (file && (file.type === 'audio/mp3' || file.type === 'audio/wav')) {
-            alert('Archivo válido');
-        } else {
-            alert('Archivo no válido');
+    function cleanupAudio() {
+        if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+            audioUrl = null;
         }
+        audioPlayer.src = '';
+        audioPlayerContainer.classList.add('hidden');
+        dropZone.classList.remove('hidden');
+        validateButton.classList.add('hidden');
+        resultContainer.classList.add('hidden');
+        validateAnother.classList.add('hidden');
+        result.textContent = '';
+    }
+
+    // Validation handler
+    validateButton.addEventListener('click', async () => {
+        const file = selectedFile;
+        const validTypes = ['audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mpeg'];
+        console.log(file);
+        if (file && validTypes.includes(file.type)) {
+            console.log(file);
+            console.log(file.type);
+            const formData = new FormData();
+            formData.append('audio', file);
+
+            loader.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            result.textContent = '';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/predict/', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await response.json();
+                if (data.result === 0) {
+                    resultContainer.classList.add('bg-red-500');
+                    resultContainer.classList.remove('bg-green-500');
+                    result.textContent = 'AUDIO FALSIFICADO';
+                } else {
+                    resultContainer.classList.add('bg-green-500');
+                    resultContainer.classList.remove('bg-red-500');
+                    result.textContent = 'AUDIO AUTENTICO';
+                }
+                // Save result to history
+                const audioBlob = await file.arrayBuffer();
+                const historyItem = { audioBlob: Array.from(new Uint8Array(audioBlob)), result: result.textContent };
+                history.unshift(historyItem);
+                localStorage.setItem('history', JSON.stringify(history));
+                const div = document.createElement('div');
+                div.classList.add('p-2', 'mb-2', 'cursor-pointer', 'hover:border', 'hover:rounded');
+                div.textContent = `Audio ${history.length}: ${result.textContent}`;
+                div.addEventListener('click', () => {
+                    const audioBlob = new Blob([new Uint8Array(historyItem.audioBlob)], { type: 'audio/mp3' });
+                    selectedFile = new File([audioBlob], `audio${history.length}.mp3`, { type: 'audio/mp3' });
+                    audioPlayer.src = URL.createObjectURL(selectedFile);
+                    audioPlayerContainer.classList.remove('hidden');
+                    dropZone.classList.add('hidden');
+                    result.textContent = historyItem.result;
+                    resultContainer.classList.remove('hidden');
+                    validateAnother.classList.remove('hidden');
+                    modalTitle.textContent = `Audio ${history.length}`;
+                    resultContainer.classList.toggle('bg-green-500', historyItem.result === 'AUDIO AUTENTICO');
+                    resultContainer.classList.toggle('bg-red-500', historyItem.result === 'AUDIO FALSIFICADO');
+                    modal.classList.remove('hidden');
+                });
+                historyContainer.prepend(div);
+                noHistoryMessage.classList.add('hidden');
+            } catch (error) {
+                result.textContent = 'Error al procesar el archivo';
+            } finally {
+                loader.classList.add('hidden');
+                resultContainer.classList.remove('hidden');
+                validateAnother.classList.remove('hidden');
+            }
+        } else {
+            alert('Por favor, sube un archivo de audio válido (.mp3 o .wav)');
+        }
+    });
+
+    // Validate another audio handler
+    validateAnother.addEventListener('click', () => {
+        cleanupAudio();
+        modal.classList.add('hidden');
     });
 </script>
