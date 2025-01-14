@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-9d%kj_fp2$o^83doy3e2+0_=on239w$yfyfo&#u6dk6ej0av+z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['audita-aiproject.onrender.com', 'audita-ai-project.vercel.app', 'localhost', '127.0.0.1']
 
 
 # Application definition
