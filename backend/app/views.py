@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 # Cargar el modelo entrenado
-MODEL_PATH = os.path.join(settings.BASE_DIR, 'app', 'models', 'best_model.h5')
+MODEL_PATH = os.path.join(settings.BASE_DIR, 'app', 'models', 'cnn_rnn_deepfake_detectorV3.keras')
 model = load_model(MODEL_PATH)
 
 # Preprocesamiento del audio
